@@ -1,0 +1,99 @@
+// Driver class
+
+import org.apache.hadoop.fs.Path; 
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat; 
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat; 
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat; 
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+
+public class task72 {
+	@SuppressWarnings("deprecation")
+	public static void main(String[] args) throws Exception {
+		Configuration conf = new Configuration();
+				Job job1 = new Job(conf, "DemoTask2");
+		job1.setJarByClass(task72.class);
+
+		job1.setMapOutputKeyClass(Text.class);
+		job1.setMapOutputValueClass(IntWritable.class);
+
+		job1.setOutputKeyClass(Text.class);
+		job1.setOutputValueClass(IntWritable.class);
+		job1.setMapperClass(map72.class);
+		job1.setCombinerClass(reduce72.class);// combiner class set
+		job1.setReducerClass(reduce72.class);
+		job1.setInputFormatClass(TextInputFormat.class);
+		job1.setOutputFormatClass(TextOutputFormat.class);
+
+		FileInputFormat.addInputPath(job1, new Path(args[0])); 
+		FileOutputFormat.setOutputPath(job1,new Path(args[1]));
+		
+		/*
+		Path out=new Path(args[1]);
+		out.getFileSystem(conf).delete(out);
+		*/
+		
+		job1.waitForCompletion(true);// wait for the job to end
+		
+	}
+}
+
+
+//mapper class
+
+
+import java.io.IOException;
+
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.*; 
+
+public class map72 extends Mapper<LongWritable, Text, Text, IntWritable> {
+	IntWritable no = new IntWritable(1);
+	public void map(LongWritable key, Text value, Context context) 
+			throws IOException, InterruptedException {
+		String[] lineArray = value.toString().split("\\|");
+		if(lineArray.length>0){
+		String s = lineArray[0];//stroing the splitted values in strings
+		String s1 = lineArray[1];
+		String s2 = lineArray[3];
+		if(!(s.equals("NA")|| s1.equals("NA")))
+		if(s.equals("Onida"))//NA condition implemented
+		{
+		context.write(new Text(s2), no);
+		}
+		}
+	}
+}
+
+
+//reduce class
+
+import java.io.IOException;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.mapreduce.Reducer;
+public class reduce72 extends Reducer<Text,IntWritable,Text, IntWritable> {
+	public void reduce(Text key, Iterable<IntWritable> value , Context con) throws IOException, InterruptedException
+	{
+		int sum =0;
+		for(IntWritable v : value)
+		{
+			sum = sum + v.get();
+		}
+		con.write(key, new IntWritable(sum));
+	}
+
+}
+
+
+//output
+
+chinmay@Chinmay-ThinkPad-E460:~/Desktop$ hadoop fs -cat /user/chins/output/72aop1/part-r-00000
+Uttar Pradesh	3
+
+
