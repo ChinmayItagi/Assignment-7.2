@@ -1,0 +1,206 @@
+// driver class
+
+
+
+
+import org.apache.hadoop.fs.Path; 
+import org.apache.hadoop.conf.*;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat; 
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat; 
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat; 
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+import org.apache.hadoop.io.IntWritable;
+
+public class task72 {
+	@SuppressWarnings("deprecation")
+	public static void main(String[] args) throws Exception {
+		Configuration conf = new Configuration();
+		Job job = new Job(conf, "AssignmentTask7");
+		job.setJarByClass(task72.class);
+
+		job.setMapOutputKeyClass(cw72.class);
+		job.setMapOutputValueClass(IntWritable.class);
+
+		job.setOutputKeyClass(cw72.class);
+		job.setOutputValueClass(IntWritable.class);
+		
+		job.setMapperClass(map72.class);
+		job.setReducerClass(reduce72.class);
+		
+		job.setNumReduceTasks(4);
+		
+		job.setInputFormatClass(TextInputFormat.class);
+		job.setOutputFormatClass(TextOutputFormat.class);
+
+		Path outputPath = new Path(args[1]);
+		FileInputFormat.addInputPath(job, new Path(args[0])); 
+		FileOutputFormat.setOutputPath(job, outputPath);
+		outputPath.getFileSystem(conf).delete(outputPath, true);
+		
+		/*
+		Path out=new Path(args[1]);
+		out.getFileSystem(conf).delete(out);
+		*/
+		
+		job.waitForCompletion(true);
+	}
+}
+
+
+//map class
+
+
+
+
+import java.io.IOException;
+
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.*; 
+
+public class map72 extends Mapper<LongWritable, Text, cw72, IntWritable> {
+	cw72 outKey = new cw72();
+	
+	IntWritable outValue = new IntWritable();
+	
+	public void map(LongWritable key, Text value, Context context) 
+			throws IOException, InterruptedException {
+		String[] lineArray = value.toString().split("\\|");
+		outKey.set(lineArray[0], Integer.parseInt(lineArray[2]));
+		outValue.set(1);
+		context.write(outKey, outValue);
+	}
+}
+
+
+//reducer class
+
+
+
+
+import java.io.IOException;
+
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.mapreduce.Reducer;
+
+public class reduce72 extends Reducer<cw72, IntWritable, cw72, IntWritable>
+{
+	IntWritable outValue = new IntWritable();
+	
+	public void reduce(cw72 key, Iterable<IntWritable> values,Context context) throws IOException, InterruptedException
+	{
+		int sum = 0;
+		for (IntWritable value : values) {
+			sum += value.get();
+		}
+		
+		outValue.set(sum);
+		context.write(key, outValue);
+	}
+}
+
+
+//comparable writable class
+
+
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+import org.apache.hadoop.io.WritableComparable;
+ 
+public class cw72 implements WritableComparable<cw72> {
+ 
+    private String company;
+    private int size;
+ 
+    public String getCompany() {
+        return company;
+    }
+ 
+    public int getSize() {
+        return size;
+    }
+ 
+    public void set(String company, int size) {
+        this.company = company;
+        this.size = size;
+    }
+ 
+    @Override
+    public void readFields(DataInput in) throws IOException {
+    	company = in.readUTF();
+    	size = in.readInt();
+    }
+ 
+    @Override
+    public void write(DataOutput out) throws IOException {
+    	out.writeUTF(company);
+    	out.writeInt(size);
+    }
+ 
+    @Override
+    public String toString() {
+        return company + "\t" + size;
+    }
+ 
+    @Override
+    public int compareTo(cw72 session7Task7CW) {
+        int cmp = company.compareTo(session7Task7CW.company);
+ 
+        if (cmp != 0) {
+            return cmp;
+        }
+ 
+        return (size - session7Task7CW.getSize());
+    }
+ 
+    @Override
+    public int hashCode(){
+        return company.hashCode();
+    }
+ 
+    @Override
+    public boolean equals(Object o)
+    {
+        if(o instanceof cw72)
+        {
+            cw72 session7Task7CW = (cw72) o;
+            return company.equalsIgnoreCase(session7Task7CW.company) && (size == session7Task7CW.getSize());
+            
+        }
+        return false;
+    }
+  
+
+
+
+
+//output
+
+chinmay@Chinmay-ThinkPad-E460:~/Desktop$ hadoop fs -ls /user/chins/output/72op1
+Found 5 items
+-rw-r--r--   4 chinmay supergroup          0 2017-03-14 22:08 /user/chins/output/72op1/_SUCCESS
+-rw-r--r--   4 chinmay supergroup         10 2017-03-14 22:08 /user/chins/output/72op1/part-r-00000
+-rw-r--r--   4 chinmay supergroup          0 2017-03-14 22:08 /user/chins/output/72op1/part-r-00001
+-rw-r--r--   4 chinmay supergroup         36 2017-03-14 22:08 /user/chins/output/72op1/part-r-00002
+-rw-r--r--   4 chinmay supergroup         50 2017-03-14 22:08 /user/chins/output/72op1/part-r-00003
+chinmay@Chinmay-ThinkPad-E460:~/Desktop$ hadoop fs -cat /user/chins/output/72op1/part-r-00000
+Lava	20	3
+chinmay@Chinmay-ThinkPad-E460:~/Desktop$ hadoop fs -cat /user/chins/output/72op1/part-r-00001
+chinmay@Chinmay-ThinkPad-E460:~/Desktop$ hadoop fs -cat /user/chins/output/72op1/part-r-00002
+Akai	16	1
+Samsung	14	6
+Samsung	16	1
+chinmay@Chinmay-ThinkPad-E460:~/Desktop$ hadoop fs -cat /user/chins/output/72op1/part-r-00003
+NA	18	1
+Onida	14	1
+Onida	16	1
+Onida	18	2
+Zen	14	2
+chinmay@Chinmay-ThinkPad-E460:~/Desktop$ 
+
+}
